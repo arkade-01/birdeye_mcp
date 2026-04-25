@@ -4,6 +4,8 @@ A plug-and-play [Model Context Protocol (MCP)](https://modelcontextprotocol.io) 
 
 Built for agents that need token prices, market data, security checks, trade history, and more across 11 blockchains.
 
+🌐 **Live server:** `https://birdeye-mcp.onrender.com`
+
 ---
 
 ## What It Does
@@ -30,7 +32,7 @@ All tools work across **Solana, Ethereum, Arbitrum, Avalanche, BSC, Optimism, Po
 
 ---
 
-## Getting Started
+## Running Locally
 
 **1. Clone the repo**
 ```bash
@@ -55,69 +57,13 @@ npm start
 
 The server starts on port `3000` by default. Set `PORT` in your environment to change it.
 
----
-
-## Connecting Your Agent
-
-Every request requires your Birdeye API key passed as a header:
-
-```
-x-birdeye-api-key: your_key_here
+**5. Test it's running**
+```bash
+curl http://localhost:3000/health
+# returns: {"status":"ok"}
 ```
 
-**MCP endpoint:**
-```
-POST http://localhost:3000/mcp
-```
-
-**Health check:**
-```
-GET http://localhost:3000/health
-```
-
-### Claude Desktop
-
-Add this to your `claude_desktop_config.json`:
-
-```json
-{
-  "mcpServers": {
-    "birdeye": {
-      "type": "http",
-      "url": "http://localhost:3000/mcp",
-      "headers": {
-        "x-birdeye-api-key": "your_key_here"
-      }
-    }
-  }
-}
-```
-
-### Custom Agent (TypeScript)
-
-```typescript
-import { Client } from "@modelcontextprotocol/sdk/client/index.js";
-import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
-
-const client = new Client({ name: "my-agent", version: "1.0.0" });
-
-await client.connect(
-  new StreamableHTTPClientTransport(new URL("http://localhost:3000/mcp"), {
-    headers: { "x-birdeye-api-key": "your_key_here" }
-  })
-);
-
-const result = await client.callTool({
-  name: "get_token_price",
-  arguments: {
-    address: "So11111111111111111111111111111111111111112",
-    chain: "solana"
-  }
-});
-```
-
-### curl
-
+**6. Test a tool call**
 ```bash
 curl -X POST http://localhost:3000/mcp \
   -H "Content-Type: application/json" \
@@ -134,6 +80,323 @@ curl -X POST http://localhost:3000/mcp \
     },
     "id": 1
   }'
+```
+
+**7. Test with MCP Inspector**
+```bash
+npm run inspect
+```
+Then in the browser UI:
+- Transport: **Streamable HTTP**
+- URL: `http://localhost:3000/mcp`
+- Headers: `x-birdeye-api-key: your_key_here`
+
+---
+
+## Authentication
+
+Every request requires your Birdeye API key passed once as a header — not per tool call:
+
+```
+x-birdeye-api-key: your_key_here
+```
+
+---
+
+## Connecting Your Agent
+
+### Using the Hosted Server
+
+Skip the local setup entirely and point your agent at the live server:
+```
+https://birdeye-mcp.onrender.com/mcp
+```
+
+---
+
+### VS Code (GitHub Copilot Agent Mode)
+
+Add this to your `.vscode/mcp.json` or VS Code MCP settings:
+
+```jsonc
+{
+  "servers": {
+    "Birdeye": {
+      "url": "https://birdeye-mcp.onrender.com/mcp",
+      "type": "http",
+      "headers": {
+        "x-birdeye-api-key": "${input:birdeyeApiKey}"
+      }
+    }
+  },
+  "inputs": [
+    {
+      "id": "birdeyeApiKey",
+      "type": "promptString",
+      "description": "Your Birdeye API key",
+      "password": true
+    }
+  ]
+}
+```
+
+Then:
+1. Open command palette — `Ctrl+Shift+P`
+2. Run **MCP: List Servers** → connect Birdeye
+3. Enter your API key when prompted
+4. Open Copilot chat in **Agent mode** and start asking questions
+
+---
+
+### Cursor
+
+Add this to your Cursor MCP settings:
+
+```jsonc
+{
+  "servers": {
+    "Birdeye": {
+      "url": "https://birdeye-mcp.onrender.com/mcp",
+      "type": "http",
+      "headers": {
+        "x-birdeye-api-key": "your_key_here"
+      }
+    }
+  }
+}
+```
+
+---
+
+### Windsurf
+
+Add this to your Windsurf MCP config:
+
+```json
+{
+  "mcpServers": {
+    "birdeye": {
+      "serverUrl": "https://birdeye-mcp.onrender.com/mcp",
+      "headers": {
+        "x-birdeye-api-key": "your_key_here"
+      }
+    }
+  }
+}
+```
+
+---
+
+### Claude Desktop
+
+Add this to your `claude_desktop_config.json`:
+
+```json
+{
+  "mcpServers": {
+    "birdeye": {
+      "url": "https://birdeye-mcp.onrender.com/mcp",
+      "headers": {
+        "x-birdeye-api-key": "your_key_here"
+      }
+    }
+  }
+}
+```
+
+---
+
+### Custom TypeScript / JavaScript Agent
+
+```typescript
+import { Client } from "@modelcontextprotocol/sdk/client/index.js";
+import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
+
+const client = new Client({ name: "my-agent", version: "1.0.0" });
+
+await client.connect(
+  new StreamableHTTPClientTransport(
+    new URL("https://birdeye-mcp.onrender.com/mcp"),
+    {
+      headers: { "x-birdeye-api-key": "your_key_here" }
+    }
+  )
+);
+
+// Get token price
+const price = await client.callTool({
+  name: "get_token_price",
+  arguments: {
+    address: "So11111111111111111111111111111111111111112",
+    chain: "solana"
+  }
+});
+
+// Search for a token by name
+const search = await client.callTool({
+  name: "search_tokens",
+  arguments: { query: "BONK", chain: "solana" }
+});
+
+// Get trending tokens
+const trending = await client.callTool({
+  name: "get_trending_tokens",
+  arguments: { chain: "solana", limit: 10 }
+});
+```
+
+---
+
+### LangChain (Python)
+
+```bash
+pip install langchain-mcp-adapters langgraph langchain-openai
+```
+
+```python
+import asyncio
+from langchain_mcp_adapters.client import MultiServerMCPClient
+from langgraph.prebuilt import create_react_agent
+from langchain_openai import ChatOpenAI
+
+async def main():
+    client = MultiServerMCPClient(
+        {
+            "birdeye": {
+                "url": "https://birdeye-mcp.onrender.com/mcp",
+                "transport": "streamable_http",
+                "headers": {
+                    "x-birdeye-api-key": "your_key_here"
+                }
+            }
+        }
+    )
+
+    tools = await client.get_tools()
+    agent = create_react_agent(ChatOpenAI(model="gpt-4o"), tools)
+
+    response = await agent.ainvoke({
+        "messages": "What are the top trending tokens on Solana right now?"
+    })
+    print(response)
+
+asyncio.run(main())
+```
+
+---
+
+### CrewAI (Python)
+
+```bash
+pip install crewai crewai-tools
+```
+
+```python
+from crewai import Agent, Task, Crew
+from crewai_tools import MCPTool
+
+birdeye_tool = MCPTool(
+    server_url="https://birdeye-mcp.onrender.com/mcp",
+    headers={"x-birdeye-api-key": "your_key_here"}
+)
+
+researcher = Agent(
+    role="Onchain Research Analyst",
+    goal="Analyze token data and market trends using real-time onchain data",
+    backstory="""You are an expert crypto analyst with access to real-time 
+    onchain data. You use Birdeye data to analyze tokens, check security, 
+    track trends, and provide actionable insights.""",
+    tools=[birdeye_tool],
+    verbose=True
+)
+
+task = Task(
+    description="""
+    Research the top 5 trending tokens on Solana:
+    1. Get the trending token list
+    2. For each token check its security profile
+    3. Get the current price and 24h volume
+    4. Summarize which ones look most promising and flag any red flags
+    """,
+    agent=researcher,
+    expected_output="A ranked list of the top 5 trending Solana tokens with security scores and market data"
+)
+
+crew = Crew(agents=[researcher], tasks=[task])
+result = crew.kickoff()
+print(result)
+```
+
+---
+
+### OpenAI Agents SDK (Python)
+
+```bash
+pip install openai-agents
+```
+
+```python
+import asyncio
+from agents import Agent, Runner
+from agents.mcp import MCPServerStreamableHttp
+
+async def main():
+    birdeye_server = MCPServerStreamableHttp(
+        url="https://birdeye-mcp.onrender.com/mcp",
+        headers={"x-birdeye-api-key": "your_key_here"}
+    )
+
+    agent = Agent(
+        name="Onchain Analyst",
+        instructions="""You are an onchain data analyst. Use the Birdeye tools to 
+        answer questions about token prices, security, market trends, and trading activity.""",
+        mcp_servers=[birdeye_server]
+    )
+
+    async with birdeye_server:
+        result = await Runner.run(agent, "Is BONK a safe token to hold?")
+        print(result.final_output)
+
+asyncio.run(main())
+```
+
+---
+
+### Python MCP Client (direct)
+
+```bash
+pip install mcp
+```
+
+```python
+import asyncio
+from mcp import ClientSession
+from mcp.client.streamable_http import streamablehttp_client
+
+async def main():
+    async with streamablehttp_client(
+        url="https://birdeye-mcp.onrender.com/mcp",
+        headers={"x-birdeye-api-key": "your_key_here"}
+    ) as (read, write, _):
+        async with ClientSession(read, write) as session:
+            await session.initialize()
+
+            # List all tools
+            tools = await session.list_tools()
+            for tool in tools.tools:
+                print(tool.name)
+
+            # Call a tool
+            result = await session.call_tool(
+                "get_token_price",
+                arguments={
+                    "address": "So11111111111111111111111111111111111111112",
+                    "chain": "solana"
+                }
+            )
+            print(result.content[0].text)
+
+asyncio.run(main())
 ```
 
 ---
@@ -155,7 +418,6 @@ curl -X POST http://localhost:3000/mcp \
 ### Price & OHLCV
 | Tool | Description |
 |------|-------------|
-| `get_token_price` | Real-time price |
 | `get_price_history` | Historical price over a time range |
 | `get_ohlcv_token` | Candlestick data for a token |
 | `get_ohlcv_pair` | Candlestick data for a trading pair |
@@ -194,19 +456,6 @@ curl -X POST http://localhost:3000/mcp \
 `solana` `ethereum` `arbitrum` `avalanche` `bsc` `optimism` `polygon` `base` `zksync` `sui` `monad`
 
 Chain defaults to `solana` if not specified.
-
----
-
-## Testing with MCP Inspector
-
-```bash
-npm run inspect
-```
-
-Then in the UI:
-- Transport: **Streamable HTTP**
-- URL: `http://localhost:3000/mcp`
-- Headers: `x-birdeye-api-key: your_key_here`
 
 ---
 

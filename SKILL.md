@@ -1,21 +1,141 @@
-# Birdeye Data — Agent Skill
+---
+name: birdeye-data
+description: Provides real-time onchain data for tokens, markets, trades, and wallets across 11 blockchains using the Birdeye API via MCP. Use when a user asks about token prices, market cap, security checks, rug pulls, trade history, trending tokens, new listings, top traders, OHLCV data, or anything related to onchain activity.
+license: MIT
+compatibility: Requires a Birdeye API key from bds.birdeye.so. Connects to a hosted MCP server over HTTP. Works with any MCP-compatible agent or client.
+metadata:
+  author: arkade-01
+  version: "1.0"
+  mcp-endpoint: https://birdeye-mcp.onrender.com/mcp
+  supported-chains: solana, ethereum, arbitrum, avalanche, bsc, optimism, polygon, base, zksync, sui, monad
+---
 
-## Overview
-You have access to a Birdeye MCP server that gives you real-time onchain data across 
-11 blockchains. Use these tools whenever a user asks about token prices, market data, 
-security checks, trade history, trending tokens, or anything related to onchain activity.
+## Setup
 
-## Connection
-- **MCP Endpoint:** `https://birdeye-mcp.onrender.com/mcp`
-- **Authentication:** Pass your Birdeye API key once as a request header:
-  ```
-  x-birdeye-api-key: YOUR_BIRDEYE_API_KEY
-  ```
+Connect to the Birdeye MCP server at:
+```
+https://birdeye-mcp.onrender.com/mcp
+```
 
-## Supported Chains
-`solana` `ethereum` `arbitrum` `avalanche` `bsc` `optimism` `polygon` `base` `zksync` `sui` `monad`
+Pass your Birdeye API key once as a header on every request:
+```
+x-birdeye-api-key: YOUR_BIRDEYE_API_KEY
+```
 
-All tools default to `solana` if no chain is specified.
+Get your API key at [bds.birdeye.so](https://bds.birdeye.so).
+
+All tools default to `chain: solana` if no chain is specified.
+
+---
+
+## Connecting Your Client
+
+### VS Code (GitHub Copilot Agent Mode)
+Add to `.vscode/mcp.json`:
+```jsonc
+{
+  "servers": {
+    "Birdeye": {
+      "url": "https://birdeye-mcp.onrender.com/mcp",
+      "type": "http",
+      "headers": {
+        "x-birdeye-api-key": "${input:birdeyeApiKey}"
+      }
+    }
+  },
+  "inputs": [
+    {
+      "id": "birdeyeApiKey",
+      "type": "promptString",
+      "description": "Your Birdeye API key",
+      "password": true
+    }
+  ]
+}
+```
+Then: `Ctrl+Shift+P` → **MCP: List Servers** → connect → enter API key → use in Agent mode.
+
+### Cursor
+```jsonc
+{
+  "servers": {
+    "Birdeye": {
+      "url": "https://birdeye-mcp.onrender.com/mcp",
+      "type": "http",
+      "headers": { "x-birdeye-api-key": "your_key_here" }
+    }
+  }
+}
+```
+
+### Windsurf
+```json
+{
+  "mcpServers": {
+    "birdeye": {
+      "serverUrl": "https://birdeye-mcp.onrender.com/mcp",
+      "headers": { "x-birdeye-api-key": "your_key_here" }
+    }
+  }
+}
+```
+
+### LangChain (Python)
+```python
+from langchain_mcp_adapters.client import MultiServerMCPClient
+
+client = MultiServerMCPClient({
+    "birdeye": {
+        "url": "https://birdeye-mcp.onrender.com/mcp",
+        "transport": "streamable_http",
+        "headers": { "x-birdeye-api-key": "your_key_here" }
+    }
+})
+tools = await client.get_tools()
+```
+
+### CrewAI (Python)
+```python
+from crewai_tools import MCPTool
+
+birdeye_tool = MCPTool(
+    server_url="https://birdeye-mcp.onrender.com/mcp",
+    headers={"x-birdeye-api-key": "your_key_here"}
+)
+```
+
+### OpenAI Agents SDK (Python)
+```python
+from agents.mcp import MCPServerStreamableHttp
+
+birdeye_server = MCPServerStreamableHttp(
+    url="https://birdeye-mcp.onrender.com/mcp",
+    headers={"x-birdeye-api-key": "your_key_here"}
+)
+```
+
+### TypeScript / JavaScript
+```typescript
+import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
+
+new StreamableHTTPClientTransport(
+  new URL("https://birdeye-mcp.onrender.com/mcp"),
+  { headers: { "x-birdeye-api-key": "your_key_here" } }
+)
+```
+
+### Direct MCP Python Client
+```python
+from mcp import ClientSession
+from mcp.client.streamable_http import streamablehttp_client
+
+async with streamablehttp_client(
+    url="https://birdeye-mcp.onrender.com/mcp",
+    headers={"x-birdeye-api-key": "your_key_here"}
+) as (read, write, _):
+    async with ClientSession(read, write) as session:
+        await session.initialize()
+```
 
 ---
 
@@ -55,8 +175,6 @@ Params: `address`, `chain`
 Use when: user wants to check whale concentration or holder distribution.
 Params: `address`, `chain`, `limit` (default 20), `offset`
 
----
-
 ### Price & OHLCV
 
 **`get_price_history`**
@@ -79,8 +197,6 @@ Params: `address`, `chain`, `type` (24h / 4h / 1h / 30m)
 Use when: user wants to know what a token was worth at a specific past moment.
 Params: `address`, `chain`, `unixtime`
 
----
-
 ### Trades
 
 **`get_trades_by_token`**
@@ -90,8 +206,6 @@ Params: `address`, `chain`, `tx_type`, `limit`, `offset`
 **`get_trades_by_pair`**
 Use when: user wants trade history for a specific pool or market.
 Params: `pair_address`, `chain`, `tx_type`, `limit`, `offset`
-
----
 
 ### Discovery
 
@@ -111,8 +225,6 @@ Params: `address`, `chain`, `time_frame`, `sort_by`, `limit`
 Use when: user mentions a token by name or ticker and you need its contract address.
 Params: `query`, `chain`, `target`, `sort_by`, `limit`
 
----
-
 ### Pairs
 
 **`get_pair_overview`**
@@ -122,8 +234,6 @@ Params: `pair_address`, `chain`
 **`get_token_markets`**
 Use when: user wants to find the best market to trade a token or compare DEX liquidity.
 Params: `address`, `chain`, `sort_by`, `limit`
-
----
 
 ### Utility
 
@@ -156,9 +266,14 @@ Params: none
 
 ---
 
-## Interval Reference
+## Reference
+
+### Interval Values
 `1m` `3m` `5m` `15m` `30m` `1H` `2H` `4H` `6H` `8H` `12H` `1D` `3D` `1W` `1M`
 
-## Time Parameters
-All `time_from` and `time_to` values are Unix timestamps (seconds).
-Example: April 23 2026 00:00 UTC = `1745366400`
+### Time Parameters
+All `time_from` and `time_to` values are Unix timestamps in seconds.
+Example: April 24 2026 00:00 UTC = `1745452800`
+
+### Supported Chains
+`solana` `ethereum` `arbitrum` `avalanche` `bsc` `optimism` `polygon` `base` `zksync` `sui` `monad`
